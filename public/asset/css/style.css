@@ -24,7 +24,15 @@
     /*box-shadow: 0 2px 3px rgba(0, 0, 0, 0.1), 
                 0 0 0 1px rgba(0, 0, 0, 0.1);*/
   }
-  
+  .new_container {
+    background-color: #d5d6da;
+    padding: 20px;
+    border-radius: 10px;
+    margin: auto;
+    max-width: 640px;
+    text-align: center;
+  }
+
   h1 {
     color: #130f40;
     font-family: 'Varela Round', sans-serif;

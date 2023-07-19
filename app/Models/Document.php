@@ -9,5 +9,5 @@ class Document extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['filename'];
+    protected $fillable = ['filename', 'content'];
 }

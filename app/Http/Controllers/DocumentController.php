@@ -8,14 +8,16 @@ use App\Models\Document;
 use Spatie\PdfToText\Pdf;
 use Illuminate\Http\Request;
 use Smalot\PdfParser\Parser;
+use PhpOffice\PhpWord\Settings;
 use PhpOffice\PhpWord\IOFactory;
+use Illuminate\Support\Facades\DB;
+use PhpOffice\PhpWord\Element\TextRun;
 use Illuminate\Support\Facades\Storage;
 
 
 class DocumentController extends Controller
 {
     public function index() {
-        
         return view('welcome');
     }
 
@@ -24,44 +26,83 @@ class DocumentController extends Controller
 {
     $uploadedFile = $request->file('documentFile');
     $uploadedFileName = $uploadedFile->getClientOriginalName();
-
     $uploadedFilePath = $uploadedFile->store('documents');
 
-    $request->session()->put('uploadedFileName', $uploadedFileName);
-    $request->session()->put('uploadedFilePath', $uploadedFilePath);
+    // Check the file type to determine if it is a PDF or Word document
+    if ($uploadedFile->getClientOriginalExtension() === 'pdf') {
+        // Handle PDF file
+        $pdfParser = new Parser();
+        $pdf = $pdfParser->parseFile($uploadedFile->path());
+        $context = $pdf->getText();
+        $lines = explode("\n", $context);
+    } elseif ($uploadedFile->getClientOriginalExtension() === 'docx' || $uploadedFile->getClientOriginalExtension() === 'doc') {
+        // Handle Word document
+        $phpWord = IOFactory::load($uploadedFile->path());
+        $sections = $phpWord->getSections();
+        $context = '';
+        foreach ($sections as $section) {
+            foreach ($section->getElements() as $element) {
+                if ($element instanceof TextRun) {
+                    foreach ($element->getElements() as $text) {
+                        if ($text instanceof \PhpOffice\PhpWord\Element\Text) {
+                            $context .= $text->getText() . " ";
+                        }
+                    }
+                }
+            }
+        }
+        $lines = explode("\n", $context);
+    } else {
+        // Invalid file type
+        return response()->json(['error' => 'Invalid file type. Only PDF and Word documents are allowed.'], 400);
+    }
 
-    $pdfParser = new Parser();
-    $pdf = $pdfParser->parseFile($uploadedFile->path());
-    $context = $pdf->getText();
+    // Serialize and store the lines in the database
+    $serializedLines = serialize($lines);
 
-    return response()->json(['message' => 'File uploaded successfully', 'context' => $context], 200);
+    // Assuming you have a "documents" table with "filename" and "content" columns
+    $doc = new Document;
+    $doc->filename = $uploadedFileName;
+    $doc->content = $serializedLines;
+    $doc->save();
+
+    return response()->json(['message' => 'File uploaded successfully'], 200);
 }
 
 
-    public function search(Request $request)
-    {
-        $searchKeywords = $request->input('search');
-    $uploadedFilePath = $request->session()->get('uploadedFilePath');
-    $context = file_get_contents(storage_path('app/'.$uploadedFilePath));
+public function search(Request $request)
+{
+    $searchKeywords = $request->input('search');
 
-    $searchResults = '';
+    // Fetch all documents containing the search keywords in either filename or content
+    $searchResults = DB::table('documents')
+                        ->where('filename', 'LIKE', '%' . $searchKeywords . '%')
+                        ->orWhere('content', 'LIKE', '%' . $searchKeywords . '%')
+                        ->get();
 
-    if (stripos($context, $searchKeywords) !== false) {
-        $searchResults = '<p>Keywords found in the document:</p>';
-        $searchResults .= '<p>' . nl2br($context) . '</p>';
+                        $output = [];
 
-        // Highlight the searched keyword
-        $searchResults = str_ireplace($searchKeywords, '<span style="color: red;">'.$searchKeywords.'</span>', $searchResults);
-    } else {
-        $searchResults = '<p>Keywords not found in the document.</p>';
-    }
+                        if ($searchResults->isNotEmpty()) {
+                            foreach ($searchResults as $result) {
+                                // Highlight the search term in the content
+                                $highlightedContent = str_ireplace($searchKeywords, '<span style="color: red">' . $searchKeywords . '</span>', $result->content);
+                                $output[] = [
+                                    'filename' => $result->filename,
+                                    'content' => $highlightedContent,
+                                ];
+                            }
+                        } else {
+                            $output[] = ['error' => 'No results found.'];
+                        }
 
-    return $searchResults;
-    }
+    return response()->json(['results' => $output]);
+}
 
-    
 
     public function file() {
         return view('upload');
     }
+
+
+
 }

@@ -26,16 +26,19 @@
 
 <h2 style="text-align: center">Search Button</h2>
 
-<form id="search-form" class="example" action="{{ url('/search') }}" method="GET" style="margin:auto;max-width:500px">
+<form id="search-form" class="example" action="{{ url('/search') }}" method="POST" style="margin:auto;max-width:500px">
   <input type="text" placeholder="Search.." name="search">
   <button type="submit"><i class="fa fa-search"></i></button>
 </form>
 
-
-<div id="uploaded-data"></div>
-<div id="original-content">
-  <div id="search-results"></div>
+<div class="new_container">
+    <div id="uploaded-data" style="color: orange;"></div>
+    <div id="search-results" style="color: green;"></div>
+    <div id="original-content">
+    </div>
 </div>
+
+
 
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
 <script>
@@ -46,67 +49,78 @@
       });
 
       $('#file-upload').on('change', function(event) {
-          var formData = new FormData();
-          formData.append('documentFile', event.target.files[0]);
+    var formData = new FormData();
+    formData.append('documentFile', event.target.files[0]);
 
-          $.ajax({
-              url: '{{ url('/upload') }}',
-              type: 'POST',
-              data: formData,
-              headers: {
-                  'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
-              },
-              contentType: false,
-              processData: false,
-              success: function(response) {
-                $('#search-results').html(response);
-    var uploadedFileName = sessionStorage.getItem('uploadedFileName');
-    var uploadedContext = response.context;
-    $('#uploaded-data').html('<p>Uploaded File: ' + uploadedFileName + '</p><p>' + uploadedContext + '</p>');
+    $.ajax({
+        url: '{{ url('/upload') }}',
+        type: 'POST',
+        data: formData,
+        headers: {
+            'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+        },
+        contentType: false,
+        processData: false,
+        success: function(response) {
+            // Check if the response has the "message" key to determine success
+            if (response.hasOwnProperty('message') && response.message === 'File uploaded successfully') {
+                // Get the uploaded file name from the response
+                var uploadedFileName = event.target.files[0].name;
+
+                // Update the web page with the uploaded file name
+                $('#uploaded-data').html('<p>Uploaded File: ' + uploadedFileName + '</p>');
+
+                // Optionally, you can also show a success message
+                $('#search-results').html('<p>File uploaded successfully.</p>');
+            } else {
+                // Show an error message if the response is not successful
+                $('#search-results').html('<p>Error uploading file.</p>');
+            }
+        },
+        error: function() {
+            // Show an error message if the AJAX request fails
+            console.log('Error uploading file');
+        }
+    });
+});
 
 
-                  
-              },
-              error: function() {
-                  console.log('Error uploading file');
-              }
-          });
-      });
 
-      $('#search-form').on('submit', function(event) {
-          event.preventDefault();
+$('#search-form').submit(function(event) {
+    event.preventDefault();
+    var searchTerm = $('input[name="search"]').val();
 
-          var searchKeywords = $('input[name="search"]').val();
-          var uploadedFileName = sessionStorage.getItem('uploadedFileName');
+    $.ajax({
+        url: '{{ url('/search') }}',
+        type: 'POST',
+        data: { 'search': searchTerm },
+        headers: {
+            'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+        },
+        success: function(response) {
+            var searchResults = response.results;
+            var searchOutput = '';
 
-          $.ajax({
-              url: $(this).attr('action'),
-              type: 'POST',
-              data: { search: searchKeywords, uploadedFileName: uploadedFileName },
-              headers: {
-                  'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
-              },
-              success: function(response) {
-                $('#search-results').html(response);
-    var uploadedFileName = sessionStorage.getItem('uploadedFileName');
-    $('#uploaded-data').html('<p>Uploaded File: ' + uploadedFileName + '</p>');
-
-    // Retrieve the original content
-    var originalContent = $('#original-content').html();
-
-    // Highlight the searched keyword in red
-    var searchKeywords = $('input[name="search"]').val();
-    if (searchKeywords !== '') {
-        var regex = new RegExp('(' + searchKeywords + ')', 'gi');
-        $('#search-results').html(originalContent.replace(regex, '<span class="highlight">$1</span>'));
+    if (searchResults.length > 0) {
+        searchOutput += '<h3>Search Results:</h3>';
+        searchResults.forEach(function(result) {
+            searchOutput += '<p><strong>Filename: </strong>' + result.filename + '</p>';
+            searchOutput += '<p>' + result.content + '</p>';
+        });
+    } else {
+        searchOutput = '<p>No results found.</p>';
     }
-              },
-              error: function() {
-                  console.log('Error searching file');
-              }
-          });
-      });
-  });
+
+    // Append the search results to the "original-content" div
+    $('#original-content').html(searchOutput);
+        },
+        error: function() {
+            console.log('Error searching.');
+        }
+    });
+});
+
+});
 </script>
 
 
