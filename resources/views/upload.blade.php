@@ -99,7 +99,7 @@ $('#search-form').submit(function(event) {
         },
         success: function(response) {
             var searchResults = response.results;
-            var searchOutput = '';
+    var searchOutput = '';
 
     if (searchResults.length > 0) {
         searchOutput += '<h3>Search Results:</h3>';

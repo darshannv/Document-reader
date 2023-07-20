@@ -80,20 +80,32 @@ public function search(Request $request)
                         ->orWhere('content', 'LIKE', '%' . $searchKeywords . '%')
                         ->get();
 
-                        $output = [];
+    $output = [];
 
-                        if ($searchResults->isNotEmpty()) {
-                            foreach ($searchResults as $result) {
-                                // Highlight the search term in the content
-                                $highlightedContent = str_ireplace($searchKeywords, '<span style="color: red">' . $searchKeywords . '</span>', $result->content);
-                                $output[] = [
-                                    'filename' => $result->filename,
-                                    'content' => $highlightedContent,
-                                ];
-                            }
-                        } else {
-                            $output[] = ['error' => 'No results found.'];
+    if ($searchResults->isNotEmpty()) {
+        foreach ($searchResults as $result) {
+            if (!empty($result->content)) {
+                $content = @unserialize($result->content); // Unserialize the data
+                if (is_array($content)) {
+                    $textDetails = '';
+                    foreach ($content as $value) {
+                        if (is_string($value)) {
+                            $textDetails .= str_replace('\t', "\n", $value) . ' '; // Replace '\t' with '\n' and concatenate the text details
                         }
+                    }
+
+                    // Highlight the search term in the text details
+                    $highlightedContent = str_ireplace($searchKeywords, '<span style="color: red">' . $searchKeywords . '</span>', $textDetails);
+                    $output[] = [
+                        'filename' => $result->filename,
+                        'content' => $highlightedContent,
+                    ];
+                }
+            }
+        }
+    } else {
+        $output[] = ['error' => 'No results found.'];
+    }
 
     return response()->json(['results' => $output]);
 }
