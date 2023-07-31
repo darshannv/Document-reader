@@ -60,7 +60,7 @@ class DocumentController extends Controller
     // Serialize and store the lines in the database
     $serializedLines = serialize($lines);
 
-    // Assuming you have a "documents" table with "filename" and "content" columns
+   //createing instance of Document to assign the values
     $doc = new Document;
     $doc->filename = $uploadedFileName;
     $doc->content = $serializedLines;
@@ -75,8 +75,7 @@ public function search(Request $request)
     $searchKeywords = $request->input('search');
 
     // Fetch all documents containing the search keywords in either filename or content
-    $searchResults = DB::table('documents')
-                        ->where('filename', 'LIKE', '%' . $searchKeywords . '%')
+    $searchResults = Document::where('filename', 'LIKE', '%' . $searchKeywords . '%')
                         ->orWhere('content', 'LIKE', '%' . $searchKeywords . '%')
                         ->get();
 
@@ -87,10 +86,10 @@ public function search(Request $request)
             if (!empty($result->content)) {
                 $content = @unserialize($result->content); // Unserialize the data
                 if (is_array($content)) {
-                    $textDetails = '';
+                    $textDetails = ' ';
                     foreach ($content as $value) {
                         if (is_string($value)) {
-                            $textDetails .= str_replace('\t', "\n", $value) . ' '; // Replace '\t' with '\n' and concatenate the text details
+                            $textDetails .= str_replace('\t', "\n ", $value) . '  '; // Replace '\t' with '\n' and concatenate the text details
                         }
                     }
 

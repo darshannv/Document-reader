@@ -78,7 +78,7 @@
             }
         },
         error: function() {
-            // Show an error message if the AJAX request fails
+           
             console.log('Error uploading file');
         }
     });
@@ -111,7 +111,7 @@ $('#search-form').submit(function(event) {
         searchOutput = '<p>No results found.</p>';
     }
 
-    // Append the search results to the "original-content" div
+    
     $('#original-content').html(searchOutput);
         },
         error: function() {

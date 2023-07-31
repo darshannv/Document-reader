@@ -16,7 +16,7 @@ return new class extends Migration
         Schema::create('documents', function (Blueprint $table) {
             $table->id();
             $table->string('filename');
-            $table->text('content');
+            $table->text('content'); // longtext also can be used.
             $table->timestamps();
         });
     }
