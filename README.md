@@ -67,3 +67,6 @@ The Laravel framework is open-sourced software licensed under the [MIT license](
 
 ## Packages used
 "smalot/pdfparser": "2.5"
+"phpoffice/phpword": "^1.1"
+
+
